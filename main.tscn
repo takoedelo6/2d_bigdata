@@ -15,10 +15,10 @@ script = ExtResource("2_h2yge")
 [node name="Graph" type="CharacterBody2D" parent="."]
 script = ExtResource("1_ig7tw")
 
-[node name="Sprite2D" type="Sprite2D" parent="Graph"]
+[node name="Player" type="Sprite2D" parent="Graph"]
 position = Vector2(372.25, 447)
 scale = Vector2(0.6128205, 0.6)
 texture = ExtResource("4_lquwl")
 
-[node name="Sprite2D" parent="." instance=ExtResource("4_1bvp3")]
+[node name="Home" parent="." instance=ExtResource("4_1bvp3")]
 position = Vector2(170.99997, 150)

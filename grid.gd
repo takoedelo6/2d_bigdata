@@ -7,6 +7,9 @@ var balance_usd = 1000.0
 var npc_balance_usd = 500.0 
 var is_selected = false
 
+# Позиция персонажа в координатах мира (без учёта зума и смещения камеры)
+var character_world_pos: Vector2 = Vector2.ZERO
+
 # --- РЕСУРСЫ ---
 var house_scene = preload("res://home.tscn")
 
@@ -14,7 +17,8 @@ var house_scene = preload("res://home.tscn")
 var npc_position = Vector2(400, 300)
 
 # --- ССЫЛКИ ---
-@onready var character = $"../Graph" 
+@onready var character = $"../Graph"
+@onready var initial_home := get_node_or_null("../Home")
 
 # --- НАВИГАЦИЯ ---
 var map_offset = Vector2.ZERO
@@ -23,6 +27,17 @@ var min_zoom = 0.05
 var max_zoom = 8.0
 
 func _ready():
+	# Стартовая позиция персонажа берётся из сцены,
+	# а затем может быть переопределена сохранением.
+	character_world_pos = character.position
+	character.set_meta("world_pos", character_world_pos)
+	character.add_to_group("world_objects")
+	
+	# Стартовый дом из сцены тоже считаем объектом мира
+	if initial_home:
+		initial_home.set_meta("world_pos", initial_home.position)
+		initial_home.add_to_group("world_objects")
+	
 	load_session()
 
 # Функция: Игрок дает деньги NPC
@@ -43,9 +58,18 @@ func take_money_from_npc():
 	else:
 		print("У NPC закончились деньги!")
 
+func move_character(delta_pos: Vector2) -> void:
+	# Двигаем персонажа в координатах мира
+	character_world_pos += delta_pos
+	character.set_meta("world_pos", character_world_pos)
+
+func get_distance_character_to_npc() -> float:
+	# Расстояние в координатах мира
+	return character_world_pos.distance_to(npc_position)
+
 func save_session():
 	var config = ConfigFile.new()
-	config.set_value("session", "character_pos", character.global_position)
+	config.set_value("session", "character_pos", character_world_pos)
 	config.set_value("session", "map_offset", map_offset)
 	config.set_value("session", "zoom_level", float(zoom_level)) 
 	config.set_value("session", "balance", balance_usd)
@@ -55,7 +79,8 @@ func save_session():
 func load_session():
 	var config = ConfigFile.new()
 	if config.load(SAVE_PATH) == OK:
-		character.global_position = config.get_value("session", "character_pos", Vector2.ZERO)
+		character_world_pos = config.get_value("session", "character_pos", character.position)
+		character.set_meta("world_pos", character_world_pos)
 		map_offset = config.get_value("session", "map_offset", Vector2.ZERO)
 		zoom_level = config.get_value("session", "zoom_level", 1.0)
 		balance_usd = config.get_value("session", "balance", 1000.0)
@@ -64,12 +89,12 @@ func load_session():
 func _process(_delta):
 	queue_redraw()
 	
-	# Обновляем позицию домов так, чтобы они "жили" на карте,
-	# а не были приклеены к экрану (учитываем зум и смещение карты).
-	for house in get_tree().get_nodes_in_group("homes"):
-		if house.has_meta("map_pos"):
-			var map_pos = house.get_meta("map_pos")
-			house.position = map_pos * zoom_level + map_offset
+	# Обновляем позицию и масштаб всех объектов мира (игрок и дома)
+	for node in get_tree().get_nodes_in_group("world_objects"):
+		if node.has_meta("world_pos"):
+			var world_pos = node.get_meta("world_pos")
+			node.position = world_pos * zoom_level + map_offset
+			node.scale = Vector2(zoom_level, zoom_level)
 
 func _draw():
 	var view_size = get_viewport_rect().size
@@ -102,8 +127,8 @@ func _input(event):
 		if event.keycode == KEY_E:
 			if balance_usd >= 100.0:
 				var house = house_scene.instantiate()
-				house.set_meta("map_pos", character.global_position)
-				house.add_to_group("homes")
+				house.set_meta("world_pos", character_world_pos)
+				house.add_to_group("world_objects")
 				add_child(house)
 				balance_usd -= 100.0
 		
