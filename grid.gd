@@ -5,8 +5,10 @@ const SAVE_PATH = "user://session_save.cfg"
 # --- ДАННЫЕ МИРА ---
 var balance_usd = 1000.0
 var npc_balance_usd = 500.0 
-var houses = [] 
 var is_selected = false
+
+# --- РЕСУРСЫ ---
+var house_scene = preload("res://home.tscn")
 
 # Позиция второго персонажа (NPC)
 var npc_position = Vector2(400, 300)
@@ -46,7 +48,6 @@ func save_session():
 	config.set_value("session", "character_pos", character.global_position)
 	config.set_value("session", "map_offset", map_offset)
 	config.set_value("session", "zoom_level", float(zoom_level)) 
-	config.set_value("session", "houses", houses)
 	config.set_value("session", "balance", balance_usd)
 	config.set_value("session", "npc_balance", npc_balance_usd)
 	config.save(SAVE_PATH)
@@ -57,7 +58,6 @@ func load_session():
 		character.global_position = config.get_value("session", "character_pos", Vector2.ZERO)
 		map_offset = config.get_value("session", "map_offset", Vector2.ZERO)
 		zoom_level = config.get_value("session", "zoom_level", 1.0)
-		houses = config.get_value("session", "houses", [])
 		balance_usd = config.get_value("session", "balance", 1000.0)
 		npc_balance_usd = config.get_value("session", "npc_balance", 500.0)
 
@@ -77,20 +77,12 @@ func _draw():
 		for y in range(int(start_y), int(view_size.y), int(grid_step)):
 			draw_line(Vector2(0, y), Vector2(view_size.x, y), Color(0.15, 0.15, 0.15))
 	
-	# 2. ДОМА
-	var house_size = 50.0 * zoom_level
-	for h_pos in houses:
-		var draw_pos = h_pos * zoom_level + map_offset
-		var rect = Rect2(draw_pos - Vector2(house_size/2, house_size/2), Vector2(house_size, house_size))
-		draw_rect(rect, Color("5d4037")) 
-		draw_rect(rect, Color.BLACK, false, 1.0)
-
-	# 3. ВТОРОЙ ПЕРСОНАЖ (NPC)
+	# 2. ВТОРОЙ ПЕРСОНАЖ (NPC)
 	var npc_draw_pos = npc_position * zoom_level + map_offset
 	draw_circle(npc_draw_pos, 20.0 * zoom_level, Color("ff4500")) 
 	draw_string(ThemeDB.fallback_font, npc_draw_pos + Vector2(-30, -35)*zoom_level, "NPC Balance: $" + str(int(npc_balance_usd)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14 * zoom_level)
 
-	# 4. ИГРОК
+	# 3. ИГРОК
 	var char_draw_pos = character.global_position * zoom_level + map_offset
 	var radius = 20.0 * zoom_level
 	if is_selected:
@@ -109,21 +101,11 @@ func _input(event):
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_E:
 			if balance_usd >= 100.0:
-				houses.append(character.global_position)
+				var house = house_scene.instantiate()
+				house.global_position = character.global_position
+				add_child(house)
 				balance_usd -= 100.0
 		
-		if event.keycode == KEY_X:
-			var mouse_pos = get_local_mouse_position()
-			var house_size = 50.0 * zoom_level
-			for i in range(houses.size() - 1, -1, -1):
-				var h_pos = houses[i]
-				var draw_pos = h_pos * zoom_level + map_offset
-				var rect = Rect2(draw_pos - Vector2(house_size/2, house_size/2), Vector2(house_size, house_size))
-				if rect.has_point(mouse_pos):
-					houses.remove_at(i)
-					balance_usd += 100.0
-					break
-					
 		if event.keycode == KEY_F5:
 			save_session()
 

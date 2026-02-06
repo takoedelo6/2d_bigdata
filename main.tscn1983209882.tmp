@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://daha1b6r11lsd" path="res://main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://mpntmkj8hxm7" path="res://graph.gd" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://c0rf2n7gn7qrg" path="res://grid.gd" id="2_h2yge"]
-[ext_resource type="PackedScene" uid="uid://c8unya8ifq74e" path="res://home.tscn" id="4_1bvp3"]
+[ext_resource type="Texture2D" uid="uid://b5sw6gqoyq534" path="res://assets/home.png" id="4_1bvp3"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0xm2m")
@@ -14,5 +14,7 @@ script = ExtResource("2_h2yge")
 [node name="Graph" type="CharacterBody2D" parent="."]
 script = ExtResource("1_ig7tw")
 
-[node name="Sprite2D" parent="." instance=ExtResource("4_1bvp3")]
-position = Vector2(170.99997, 150)
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(-143, 114)
+scale = Vector2(0.47810218, 0.5)
+texture = ExtResource("4_1bvp3")
