@@ -63,6 +63,13 @@ func load_session():
 
 func _process(_delta):
 	queue_redraw()
+	
+	# Обновляем позицию домов так, чтобы они "жили" на карте,
+	# а не были приклеены к экрану (учитываем зум и смещение карты).
+	for house in get_tree().get_nodes_in_group("homes"):
+		if house.has_meta("map_pos"):
+			var map_pos = house.get_meta("map_pos")
+			house.position = map_pos * zoom_level + map_offset
 
 func _draw():
 	var view_size = get_viewport_rect().size
@@ -82,14 +89,7 @@ func _draw():
 	draw_circle(npc_draw_pos, 20.0 * zoom_level, Color("ff4500")) 
 	draw_string(ThemeDB.fallback_font, npc_draw_pos + Vector2(-30, -35)*zoom_level, "NPC Balance: $" + str(int(npc_balance_usd)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14 * zoom_level)
 
-	# 3. ИГРОК
-	var char_draw_pos = character.global_position * zoom_level + map_offset
-	var radius = 20.0 * zoom_level
-	if is_selected:
-		draw_circle(char_draw_pos, radius + 5.0, Color(1, 1, 1, 0.3)) 
-	draw_circle(char_draw_pos, radius, Color("32cd32"))
-
-	# 5. ИНТЕРФЕЙС
+	# 3. ИНТЕРФЕЙС
 	draw_rect(Rect2(Vector2(10, 10), Vector2(260, 115)), Color(0, 0, 0, 0.8))
 	draw_string(ThemeDB.fallback_font, Vector2(20, 35), "Your Balance: $" + str(int(balance_usd)), HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
 	draw_string(ThemeDB.fallback_font, Vector2(20, 55), "[E] Build | [X] Remove", HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
@@ -102,7 +102,8 @@ func _input(event):
 		if event.keycode == KEY_E:
 			if balance_usd >= 100.0:
 				var house = house_scene.instantiate()
-				house.global_position = character.global_position
+				house.set_meta("map_pos", character.global_position)
+				house.add_to_group("homes")
 				add_child(house)
 				balance_usd -= 100.0
 		
