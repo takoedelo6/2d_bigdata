@@ -18,7 +18,9 @@ var npc_position = Vector2(400, 300)
 
 # --- ССЫЛКИ ---
 @onready var character = $"../Graph"
+@onready var player_sprite: Sprite2D = character.get_node_or_null("Player")
 @onready var initial_home := get_node_or_null("../Home")
+@onready var inventory_panel = get_node("../UI/InventoryPanel")
 
 # --- НАВИГАЦИЯ ---
 var map_offset = Vector2.ZERO
@@ -96,6 +98,19 @@ func _process(_delta):
 			node.position = world_pos * zoom_level + map_offset
 			node.scale = Vector2(zoom_level, zoom_level)
 
+	# Обновляем визуальное состояние выделения игрока
+	_update_player_highlight()
+
+func _update_player_highlight():
+	if not player_sprite:
+		return
+	if is_selected:
+		# Немного подсветим игрока (чуть светлее)
+		player_sprite.self_modulate = Color(1, 1, 1)
+	else:
+		# Обычный вид
+		player_sprite.self_modulate = Color(1, 1, 1)
+
 func _draw():
 	var view_size = get_viewport_rect().size
 	
@@ -114,13 +129,16 @@ func _draw():
 	draw_circle(npc_draw_pos, 20.0 * zoom_level, Color("ff4500")) 
 	draw_string(ThemeDB.fallback_font, npc_draw_pos + Vector2(-30, -35)*zoom_level, "NPC Balance: $" + str(int(npc_balance_usd)), HORIZONTAL_ALIGNMENT_LEFT, -1, 14 * zoom_level)
 
-	# 3. ИНТЕРФЕЙС
-	draw_rect(Rect2(Vector2(10, 10), Vector2(260, 115)), Color(0, 0, 0, 0.8))
-	draw_string(ThemeDB.fallback_font, Vector2(20, 35), "Your Balance: $" + str(int(balance_usd)), HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
-	draw_string(ThemeDB.fallback_font, Vector2(20, 55), "[E] Build | [X] Remove", HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
-	draw_string(ThemeDB.fallback_font, Vector2(20, 75), "[T] Give $100 to NPC", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.4, 0.8, 1))
-	draw_string(ThemeDB.fallback_font, Vector2(20, 90), "[Y] Take $100 from NPC", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.8, 0.4))
-	draw_string(ThemeDB.fallback_font, Vector2(20, 105), "[F5] Save Progress", HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+	# 3. ИНТЕРФЕЙС (HUD) — сдвигаем в правый верхний угол, чтобы не мешал панели задач
+	var hud_size = Vector2(260, 115)
+	var hud_pos = Vector2(view_size.x - hud_size.x - 10, 10)
+	
+	draw_rect(Rect2(hud_pos, hud_size), Color(0, 0, 0, 0.8))
+	draw_string(ThemeDB.fallback_font, hud_pos + Vector2(10, 25), "Your Balance: $" + str(int(balance_usd)), HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+	draw_string(ThemeDB.fallback_font, hud_pos + Vector2(10, 45), "[E] Build | [X] Remove", HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+	draw_string(ThemeDB.fallback_font, hud_pos + Vector2(10, 65), "[T] Give $100 to NPC", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.4, 0.8, 1))
+	draw_string(ThemeDB.fallback_font, hud_pos + Vector2(10, 80), "[Y] Take $100 from NPC", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.8, 0.4))
+	draw_string(ThemeDB.fallback_font, hud_pos + Vector2(10, 95), "[F5] Save Progress", HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
 
 func _input(event):
 	if event is InputEventKey and event.pressed:
@@ -136,6 +154,21 @@ func _input(event):
 			save_session()
 
 	if event is InputEventMouseButton:
+		# Клик по игроку — выделяем его и открываем/закрываем инвентарь
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			var mouse_pos = event.position
+			var click_radius = 40.0
+			if mouse_pos.distance_to(character.position) <= click_radius:
+				is_selected = !is_selected
+				if is_selected:
+					inventory_panel.open()
+				else:
+					inventory_panel.close()
+			else:
+				# Клик мимо игрока — снимаем выделение и закрываем инвентарь
+				is_selected = false
+				inventory_panel.close()
+
 		# Зум в точку курсора
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP or event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			var mouse_pos = get_viewport().get_mouse_position()
